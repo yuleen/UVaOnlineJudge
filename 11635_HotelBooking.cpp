@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <vector>
+#include <list>
 #include <queue>
 #include <algorithm>
 
@@ -27,9 +28,8 @@ int hotel_booking_count[MAX_HOTELS][MAX_HOTELS];
 int city_count;
 int hotel_count;
 
-// 使用 shortest path faster algorithm (SPFA) 找出從 source 到任何一點的最短路徑
+
 int distance_from_source[MAX_CITIES];
-bool in_calc_queue[MAX_CITIES];
 void dumpShortestPathResult(int source)
 {
     printf("Distance from city %3d: \n", source);
@@ -38,6 +38,8 @@ void dumpShortestPathResult(int source)
     }
 }
 
+// 使用 shortest path faster algorithm (SPFA) 找出從 source 到任何一點的最短路徑
+bool in_calc_queue[MAX_CITIES];
 void shortestPath(int source)
 {
     memset(in_calc_queue, 0, sizeof(in_calc_queue));
@@ -68,6 +70,79 @@ void shortestPath(int source)
     }
 
     //dumpShortestPathResult(source);
+}
+
+// 使用 Dijkstra 演算法找出從 source 到任何一點的最短路徑
+bool visited[MAX_CITIES];
+void dijkstra(int source)
+{
+    memset(visited, 0, sizeof(visited));
+    std::fill(distance_from_source, distance_from_source + city_count + 1, 1e9);
+
+    std::queue<int> calc_queue;
+    calc_queue.push(source);
+    distance_from_source[source] = 0;
+
+    for(int n = 0; n < city_count; n++) {
+        while(!calc_queue.empty() && visited[calc_queue.front()])
+            calc_queue.pop();
+
+        if(calc_queue.empty())
+            break;
+
+        int current_city = calc_queue.front();
+        calc_queue.pop();
+        visited[current_city] = true;
+
+        for(int i = 0; i < city_list[current_city].size(); i++) {
+            CityNode next_city = city_list[current_city][i];
+
+            int new_distance = distance_from_source[current_city] + next_city.distance;
+            if(new_distance < distance_from_source[next_city.destination]) {
+                distance_from_source[next_city.destination] = new_distance;
+                calc_queue.push(next_city.destination);
+            }
+        }
+    }
+}
+
+void dijkstra_2(int source)
+{
+    memset(visited, 0, sizeof(visited));
+    std::fill(distance_from_source, distance_from_source + city_count + 1, 1e9);
+
+    std::vector<int> calc_queue;
+    for(int n = 0; n < city_count; n++) {
+        if(n != source)
+            calc_queue.push_back(n);
+    }
+
+    distance_from_source[source] = 0;
+    int candidate_city = source;
+
+    while(!calc_queue.empty()) {
+        for(int i = 0; i < city_list[candidate_city].size(); i++) {
+            CityNode next_city = city_list[candidate_city][i];
+
+            int new_distance = distance_from_source[candidate_city] + next_city.distance;
+            if(new_distance < distance_from_source[next_city.destination]) {
+                distance_from_source[next_city.destination] = new_distance;
+            }
+        }
+
+        std::vector<int>::const_iterator iter = calc_queue.begin();
+        std::vector<int>::const_iterator candidate_iter = calc_queue.begin();
+        int min_distance = distance_from_source[*candidate_iter];
+        for( ++iter; iter != calc_queue.end(); iter++) {
+            if(distance_from_source[*iter] < min_distance) {
+                min_distance = distance_from_source[*iter];
+                candidate_iter = iter;
+            }
+        }
+
+        candidate_city = *candidate_iter;
+        calc_queue.erase(candidate_iter);
+    }
 }
 
 void dumpHotelCities()
@@ -144,7 +219,9 @@ int main(int argc, char *argv[])
 
         for(int src_h = 0; src_h < hotel_count; src_h++) {
             hotel_booking_count[src_h][src_h] = 0;
-            shortestPath(hotel_to_city_map[src_h]);
+            //shortestPath(hotel_to_city_map[src_h]);
+            //dijkstra(hotel_to_city_map[src_h]);
+            dijkstra_2(hotel_to_city_map[src_h]);
 
             for(int dest_h = 0; dest_h < hotel_count; dest_h++) {
             //for(int dest_h = src_h + 1; dest_h < hotel_count; dest_h++) {
