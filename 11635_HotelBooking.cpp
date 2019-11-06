@@ -73,6 +73,7 @@ void shortestPath(int source)
 }
 
 // 使用 Dijkstra 演算法找出從 source 到任何一點的最短路徑
+// Note: 答案是錯的
 bool visited[MAX_CITIES];
 void dijkstra(int source)
 {
@@ -94,34 +95,33 @@ void dijkstra(int source)
         calc_queue.pop();
         visited[current_city] = true;
 
-        for(int i = 0; i < city_list[current_city].size(); i++) {
+        for(int i = 0, _max_i = city_list[current_city].size(); i < _max_i; i++) {
             CityNode next_city = city_list[current_city][i];
 
-            int new_distance = distance_from_source[current_city] + next_city.distance;
-            if(new_distance < distance_from_source[next_city.destination]) {
-                distance_from_source[next_city.destination] = new_distance;
-                calc_queue.push(next_city.destination);
+            if(!visited[next_city.destination]) {
+                int new_distance = distance_from_source[current_city] + next_city.distance;
+                if(new_distance < distance_from_source[next_city.destination]) {
+                    distance_from_source[next_city.destination] = new_distance;
+                    calc_queue.push(next_city.destination);
+                }
             }
         }
     }
 }
 
+// Note: 會超出 4 秒時間限制
 void dijkstra_2(int source)
 {
     memset(visited, 0, sizeof(visited));
     std::fill(distance_from_source, distance_from_source + city_count + 1, 1e9);
 
-    std::vector<int> calc_queue;
-    for(int n = 0; n < city_count; n++) {
-        if(n != source)
-            calc_queue.push_back(n);
-    }
-
     distance_from_source[source] = 0;
     int candidate_city = source;
 
-    while(!calc_queue.empty()) {
-        for(int i = 0; i < city_list[candidate_city].size(); i++) {
+    for(int n = 0, _max_n = city_count - 1; n < _max_n; n++) {
+        visited[candidate_city] = true;
+
+        for(int i = 0, _max_i = city_list[candidate_city].size(); i < _max_i; i++) {
             CityNode next_city = city_list[candidate_city][i];
 
             int new_distance = distance_from_source[candidate_city] + next_city.distance;
@@ -130,18 +130,28 @@ void dijkstra_2(int source)
             }
         }
 
-        std::vector<int>::const_iterator iter = calc_queue.begin();
-        std::vector<int>::const_iterator candidate_iter = calc_queue.begin();
-        int min_distance = distance_from_source[*candidate_iter];
-        for( ++iter; iter != calc_queue.end(); iter++) {
-            if(distance_from_source[*iter] < min_distance) {
-                min_distance = distance_from_source[*iter];
-                candidate_iter = iter;
+        int min_distance = 1e9;
+        int head_candidate_city = -1;
+        int new_candidate_city = -1;
+        for(int i = 1; i <= city_count; i++) {
+            if(visited[i])
+                continue;
+
+            if(head_candidate_city < 0)
+                head_candidate_city = i;
+
+            if(distance_from_source[i] < min_distance) {
+                min_distance = distance_from_source[i];
+                new_candidate_city = i;
             }
         }
 
-        candidate_city = *candidate_iter;
-        calc_queue.erase(candidate_iter);
+        if(new_candidate_city < 0)
+            new_candidate_city = head_candidate_city;
+        if(new_candidate_city < 0)
+            break;
+
+        candidate_city = new_candidate_city;
     }
 }
 
@@ -219,9 +229,9 @@ int main(int argc, char *argv[])
 
         for(int src_h = 0; src_h < hotel_count; src_h++) {
             hotel_booking_count[src_h][src_h] = 0;
-            //shortestPath(hotel_to_city_map[src_h]);
+            shortestPath(hotel_to_city_map[src_h]);
             //dijkstra(hotel_to_city_map[src_h]);
-            dijkstra_2(hotel_to_city_map[src_h]);
+            //dijkstra_2(hotel_to_city_map[src_h]);
 
             for(int dest_h = 0; dest_h < hotel_count; dest_h++) {
             //for(int dest_h = src_h + 1; dest_h < hotel_count; dest_h++) {
